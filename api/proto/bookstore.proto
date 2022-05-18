@@ -6,11 +6,11 @@ option go_package = "pkg/api";
 
 service BookStorage {
   rpc getBooks(Author) returns (BooksSet) {}
-  rpc getAuthors(Title) returns (AuthorsSet) {}
+  rpc getAuthors(Title) returns (Authors) {}
 }
-message AuthorsSet {
+message Authors {
   //  string names = 1;
-  repeated Author authors = 1;
+  repeated string author = 1;
 }
 message BooksSet {
   //  string titles = 1;
@@ -22,9 +22,9 @@ message Author { // определение типа сообщений Author
 }
 
 message Book {
-  int64 isbn = 1;
+  string isbn = 1;
   string title = 2;
-  string author = 3;
+//  string author = 3;
   uint32 year = 4;
 }
 

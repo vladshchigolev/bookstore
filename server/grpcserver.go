@@ -4,18 +4,28 @@ import (
 	"bookstore/pkg/api"
 	"context"
 	"database/sql"
-	"fmt"
+	"github.com/sirupsen/logrus"
 )
 
 type GRPCServer struct {
-	DB *sql.DB
+	config *Config
+	DB     *sql.DB
+	logger *logrus.Logger
 }
 
-func New() *GRPCServer {
-	return &GRPCServer{}
+type Config struct {
+	DataSourceName string `toml:"data_source_name"`
+	LogLevel       string `toml:"log_level"`
+}
+
+func NewConfig() *Config {
+	return &Config{}
+}
+func New(config *Config) *GRPCServer {
+	return &GRPCServer{config: config, logger: logrus.New()}
 }
 func (s *GRPCServer) ConfigureDatabase() error {
-	db, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/test")
+	db, err := sql.Open("mysql", s.config.DataSourceName)
 	if err != nil {
 		return err
 	}
@@ -23,20 +33,31 @@ func (s *GRPCServer) ConfigureDatabase() error {
 	if err := db.Ping(); err != nil {
 		return err
 	}
+	s.logger.Info("db connection established")
 	s.DB = db
 	return nil
 }
-
+func (s *GRPCServer) ConfigureLogger() error {
+	//logger := logrus.New()
+	level, err := logrus.ParseLevel(s.config.LogLevel)
+	if err != nil {
+		return err
+	}
+	s.logger.SetLevel(level)
+	s.logger.Info("logger configured")
+	return nil
+}
 func (s *GRPCServer) GetBooks(ctx context.Context, auth *api.Author) (*api.BooksSet, error) {
 	// здесь мы должны взять значение поля Name переданного методу объекта типа Author и по этому значению искать в базе книги
 	//brepo := store.BookRepository{}
 	//return nil, nil
 
-	rows, err := s.DB.Query("SELECT isbn, title, author, year FROM books WHERE author = ?", auth.Name)
-	fmt.Println(auth.Name)
+	rows, err := s.DB.Query("SELECT books.isbn, title, year FROM books, authors WHERE author = ? AND books.isbn = authors.isbn", auth.Name)
+	s.logger.Info("requesting data from the database")
 	if err != nil {
 		return nil, err
 	}
+	s.logger.Info("request completed successfully")
 	defer rows.Close()
 
 	var bks api.BooksSet
@@ -44,7 +65,7 @@ func (s *GRPCServer) GetBooks(ctx context.Context, auth *api.Author) (*api.Books
 	for rows.Next() {
 		var bk api.Book
 
-		err := rows.Scan(&bk.Isbn, &bk.Title, &bk.Author, &bk.Year)
+		err := rows.Scan(&bk.Isbn, &bk.Title, &bk.Year)
 		if err != nil {
 			return nil, err
 		}
@@ -58,6 +79,31 @@ func (s *GRPCServer) GetBooks(ctx context.Context, auth *api.Author) (*api.Books
 	return &bks, nil
 }
 
-func (s *GRPCServer) GetAuthors(ctx context.Context, book *api.Title) (*api.AuthorsSet, error) {
-	return nil, nil
+func (s *GRPCServer) GetAuthors(ctx context.Context, book *api.Title) (*api.Authors, error) {
+	var authors api.Authors
+
+	rows, err := s.DB.Query("SELECT author FROM books, authors WHERE title = ? AND books.isbn = authors.isbn", book.Title)
+	s.logger.Info("requesting data from the database")
+	if err != nil {
+		return nil, err
+	}
+	s.logger.Info("request completed successfully")
+	defer rows.Close()
+
+	for rows.Next() {
+		var author string
+		err := rows.Scan(&author)
+
+		if err != nil {
+			return nil, err
+		}
+
+		authors.Author = append(authors.Author, author)
+
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &authors, err
 }

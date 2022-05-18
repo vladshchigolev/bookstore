@@ -23,7 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BookStorageClient interface {
 	GetBooks(ctx context.Context, in *Author, opts ...grpc.CallOption) (*BooksSet, error)
-	GetAuthors(ctx context.Context, in *Title, opts ...grpc.CallOption) (*AuthorsSet, error)
+	GetAuthors(ctx context.Context, in *Title, opts ...grpc.CallOption) (*Authors, error)
 }
 
 type bookStorageClient struct {
@@ -43,8 +43,8 @@ func (c *bookStorageClient) GetBooks(ctx context.Context, in *Author, opts ...gr
 	return out, nil
 }
 
-func (c *bookStorageClient) GetAuthors(ctx context.Context, in *Title, opts ...grpc.CallOption) (*AuthorsSet, error) {
-	out := new(AuthorsSet)
+func (c *bookStorageClient) GetAuthors(ctx context.Context, in *Title, opts ...grpc.CallOption) (*Authors, error) {
+	out := new(Authors)
 	err := c.cc.Invoke(ctx, "/api.BookStorage/getAuthors", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (c *bookStorageClient) GetAuthors(ctx context.Context, in *Title, opts ...g
 // for forward compatibility
 type BookStorageServer interface {
 	GetBooks(context.Context, *Author) (*BooksSet, error)
-	GetAuthors(context.Context, *Title) (*AuthorsSet, error)
+	GetAuthors(context.Context, *Title) (*Authors, error)
 	//mustEmbedUnimplementedBookStorageServer()
 }
 
@@ -68,7 +68,7 @@ type UnimplementedBookStorageServer struct {
 func (UnimplementedBookStorageServer) GetBooks(context.Context, *Author) (*BooksSet, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBooks not implemented")
 }
-func (UnimplementedBookStorageServer) GetAuthors(context.Context, *Title) (*AuthorsSet, error) {
+func (UnimplementedBookStorageServer) GetAuthors(context.Context, *Title) (*Authors, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAuthors not implemented")
 }
 func (UnimplementedBookStorageServer) mustEmbedUnimplementedBookStorageServer() {}
