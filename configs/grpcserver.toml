@@ -1,2 +1,2 @@
-data_source_name = "root:@tcp(127.0.0.1:3306)/test"
+data_source_name = "root:password@tcp(localhost:3306)/test"
 log_level = "debug"
